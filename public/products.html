@@ -7,6 +7,14 @@
   <script src="collect.js"></script>
 </head>
 <body>
+  <script>
+    // Protect page: redirect to login if no user found
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.email || !user.name) {
+      window.location.href = "index.html";
+    }
+  </script>
+
   <header>
     <div><strong>User:</strong> <span id="userInfo"></span></div>
     <button onclick="logout()">Logout</button>
@@ -17,12 +25,13 @@
   <a href="cart.html">Go to Cart</a>
 
   <script>
-    const email = localStorage.getItem("user_email");
-    const name = localStorage.getItem("user_name");
-    const loginTime = localStorage.getItem("login_time");
+    // Safe access after protection
+    const user = JSON.parse(localStorage.getItem("user"));
+    const email = user.email;
+    const name = user.name;
+    const cartKey = `cart_items_${email}`;
 
-    if (!email || !name) window.location.href = "index.html";
-    document.getElementById("userInfo").innerText = name + " (" + email + ")";
+    document.getElementById("userInfo").innerText = `${name} (${email})`;
 
     function logout() {
       localStorage.clear();
@@ -35,7 +44,6 @@
     ];
 
     const container = document.getElementById("productList");
-    const cartKey = `cart_items_${email}`;
     let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
 
     products.forEach(product => {
@@ -56,6 +64,7 @@
       trackCart(cart);
     }
 
+    // Tracking
     trackPageView("products.html");
   </script>
 </body>
