@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sign Up</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>Sign Up</h2>
+  <input type="text" id="name" placeholder="Name" />
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="signup()">Sign Up</button>
+  <div class="success" id="success"></div>
+  <div class="error" id="error"></div>
+
+  <script src="collect.js"></script>
+  <script>
+    async function signup() {
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const successDiv = document.getElementById("success");
+      const errorDiv = document.getElementById("error");
+
+      if (!name || !email || !password) {
+        errorDiv.textContent = "Please fill all fields.";
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        if (response.ok) {
+          successDiv.textContent = "Thank you for signing up! Redirecting to login page...";
+          setTimeout(() => {
+            window.location.href = "index.html";
+          }, 10000);
+        } else {
+          errorDiv.textContent = "Sign up failed. Try again later.";
+        }
+      } catch (err) {
+        errorDiv.textContent = "Sign up error. Try again later.";
+        console.error("Signup error:", err);
+      }
+    }
+  </script>
+</body>
+</html>

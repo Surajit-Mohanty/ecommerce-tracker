@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>Login</h2>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+  <p>New User? <a href="signup.html">Sign Up</a></p>
+  <div class="error" id="error"></div>
+
+  <script src="collect.js"></script>
+  <script>
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const errorDiv = document.getElementById("error");
+      errorDiv.textContent = "";
+
+      if (!email || !password) {
+        errorDiv.textContent = "Please fill in all fields.";
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/users');
+        const data = await response.json();
+        const user = data.find(u => u.keys.Email === email && u.values.Password === password);
+
+        if (user) {
+          localStorage.setItem("user_email", email);
+          localStorage.setItem("user_name", user.values.Name);
+          localStorage.setItem("login_time", new Date().toLocaleString());
+          window.location.href = "products.html";
+        } else {
+          errorDiv.textContent = "Invalid email or password.";
+        }
+      } catch (err) {
+        errorDiv.textContent = "Login failed. Try again later.";
+        console.error("Login error:", err);
+      }
+    }
+  </script>
+</body>
+</html>

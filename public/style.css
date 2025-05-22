@@ -1,0 +1,19 @@
+
+body {
+  font-family: Arial;
+  max-width: 600px;
+  margin: auto;
+}
+input, button {
+  margin: 10px 0;
+  padding: 10px;
+  width: 100%;
+}
+.success { color: green; }
+.error { color: red; }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cart</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="collect.js"></script>
+</head>
+<body>
+  <header>
+    <div><strong>User:</strong> <span id="userInfo"></span></div>
+    <button onclick="logout()">Logout</button>
+  </header>
+
+  <h1>Your Cart</h1>
+  <div id="cartItems"></div>
+  <button onclick="sendToSFMC()">Send to SFMC</button>
+  <a href="products.html" id="continueLink">Continue Shopping</a>
+
+  <script>
+    const email = localStorage.getItem("user_email");
+    const name = localStorage.getItem("user_name");
+    const loginTime = localStorage.getItem("login_time");
+    if (!email || !name) window.location.href = "index.html";
+    document.getElementById("userInfo").innerText = `${name} (${email})`;
+
+    const cartKey = `cart_items_${email}`;
+    let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+    const container = document.getElementById("cartItems");
+
+    function renderCart() {
+      container.innerHTML = "";
+      if (cart.length === 0) {
+        container.innerHTML = "<p>Your cart is empty.</p>";
+        document.getElementById("continueLink").style.display = "inline";
+        return;
+      }
+      cart.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <img src="${item.image}" />
+          <strong>${item.name}</strong><br/>Qty: ${item.quantity}<br/>$${item.price}
+          <span onclick="removeFromCart(${index})" style="color:red;cursor:pointer;">Remove</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      localStorage.setItem(cartKey, JSON.stringify(cart));
+      renderCart();
+      trackCart(cart);
+    }
+
+    function sendToSFMC() {
+      if (cart.length === 0) return alert("Cart is empty");
+      trackConversion(cart);
+    }
+
+    renderCart();
+    trackPageView("cart.html");
+  </script>
+</body>
+</html>
