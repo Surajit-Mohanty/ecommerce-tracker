@@ -75,15 +75,15 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Login API
+// Login route - fetch all users from DE using sync GET endpoint
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const token = await getAccessToken();
-    const url = `${restUrl}data/v1/customobjectdata/key/${userDEKey}/rowset`;
 
-    const response = await fetch(url, {
+    // Use the synchronous API to fetch user records
+    const response = await fetch(`${restUrl}data/v1/customobjectdata/key:${userDEKey}/rows`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -97,17 +97,17 @@ app.post('/api/login', async (req, res) => {
     }
 
     const data = await response.json();
-    const users = data.items || [];
 
-    const user = users.find(
-      (u) => u.keys.Email.toLowerCase() === email.toLowerCase()
-    );
+    // Flatten and find matching user by email
+    const users = data.items || [];
+    const user = users.find(u => u.values.Email === email);
 
     if (user && user.values.Password === password) {
-      res.status(200).json({ name: user.values.Name, email: user.keys.Email });
+      res.status(200).json({ name: user.values.Name, email: user.values.Email });
     } else {
       res.status(401).send('Invalid credentials');
     }
+
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).send('Login error');
