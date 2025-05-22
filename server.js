@@ -1,32 +1,30 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch'); // fetch for Node.js
+const fetch = require('node-fetch');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files
+// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// SFMC credentials and URLs from environment variables
+// Environment variables
 const clientId = process.env.SFMC_CLIENT_ID;
 const clientSecret = process.env.SFMC_CLIENT_SECRET;
 const authUrl = process.env.SFMC_AUTH_URL;
 const restUrl = process.env.SFMC_REST_URL;
 const userDEKey = process.env.USER_DATA_EXTENSION_KEY;
+const eventDEKey = process.env.DATA_EXTENSION_KEY;
 
-console.log('Using SFMC Auth URL:', authUrl);
-console.log('Using SFMC Client ID:', clientId);
-console.log('Using SFMC Client Secret:', clientSecret ? '***hidden***' : 'missing');
+// Construct DE endpoints
+const userDataExtensionUrl = `${restUrl}data/v1/customobjectdata/key/${userDEKey}/rowset`;
+const eventDataExtensionUrl = `${restUrl}data/v1/customobjectdata/key/${eventDEKey}/rowset`;
 
-// Build Data Extension rows URL for user DE
-const userDataExtensionUrl = `${restUrl}data/v1/async/dataextensions/key:${userDEKey}/rows`;
-
-// Get OAuth access token from SFMC
+// Get access token
 async function getAccessToken() {
   const response = await fetch(authUrl, {
     method: 'POST',
@@ -47,7 +45,7 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-// Signup route - add user to Data Extension
+// Signup - store in user DE
 app.post('/api/signup', async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -57,9 +55,11 @@ app.post('/api/signup', async (req, res) => {
     const payload = {
       items: [
         {
-          Email: email,
-          Name: name,
-          Password: password,
+          keys: { Email: email },
+          values: {
+            Name: name,
+            Password: password,
+          },
         },
       ],
     };
@@ -86,14 +86,15 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Login route - fetch all users and filter (basic demo, not scalable)
+// Login - retrieve from user DE by email
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const token = await getAccessToken();
+    const filterUrl = `${restUrl}data/v1/customobjectdata/key/${userDEKey}/rowset?$filter=Email%20eq%20'${email}'`;
 
-    const response = await fetch(userDataExtensionUrl, {
+    const response = await fetch(filterUrl, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -103,13 +104,11 @@ app.post('/api/login', async (req, res) => {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Failed to fetch users: ${text}`);
+      throw new Error(`Failed to fetch user: ${text}`);
     }
 
     const data = await response.json();
-
-    // Filter user by email (case-sensitive)
-    const user = data.items && data.items.find(u => u.Email === email);
+    const user = data.items?.[0]?.values;
 
     if (user && user.Password === password) {
       res.status(200).json({ name: user.Name, email: user.Email });
@@ -122,7 +121,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Cart tracking route - store event data in Data Extension (optional)
+// Track cart events in event DE
 app.post('/api/track', async (req, res) => {
   const { name, email, eventType, cartItems } = req.body;
 
@@ -132,17 +131,18 @@ app.post('/api/track', async (req, res) => {
     const payload = {
       items: [
         {
-          Name: name,
-          Email: email,
-          EventType: eventType,
-          CartItems: JSON.stringify(cartItems),
-          Timestamp: new Date().toISOString(),
+          keys: { Email: email },
+          values: {
+            Name: name,
+            EventType: eventType,
+            CartItems: JSON.stringify(cartItems),
+            Timestamp: new Date().toISOString(),
+          },
         },
       ],
     };
 
-    // Reuse same DE URL or use different DE URL for tracking events if you have one
-    const response = await fetch(userDataExtensionUrl, {
+    const response = await fetch(eventDataExtensionUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -164,7 +164,7 @@ app.post('/api/track', async (req, res) => {
   }
 });
 
-// Serve main index.html on root
+// Root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
