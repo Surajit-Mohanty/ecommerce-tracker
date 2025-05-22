@@ -15,35 +15,34 @@
 
   <script src="collect.js"></script>
   <script>
-    async function login() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      const errorDiv = document.getElementById("error");
-      errorDiv.textContent = "";
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-      if (!email || !password) {
-        errorDiv.textContent = "Please fill in all fields.";
-        return;
-      }
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
 
-      try {
-        const response = await fetch('/api/users');
-        const data = await response.json();
-        const user = data.find(u => u.keys.Email === email && u.values.Password === password);
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-        if (user) {
-          localStorage.setItem("user_email", email);
-          localStorage.setItem("user_name", user.values.Name);
-          localStorage.setItem("login_time", new Date().toLocaleString());
-          window.location.href = "products.html";
-        } else {
-          errorDiv.textContent = "Invalid email or password.";
-        }
-      } catch (err) {
-        errorDiv.textContent = "Login failed. Try again later.";
-        console.error("Login error:", err);
-      }
+    if (response.ok) {
+      const user = await response.json();
+      localStorage.setItem('user', JSON.stringify(user));
+      window.location.href = 'products.html'; // Redirect on success
+    } else if (response.status === 401) {
+      alert('Invalid credentials');
+    } else {
+      alert('Login failed. Try again later.');
     }
-  </script>
+  } catch (error) {
+    console.error('Login error:', error);
+    alert('Login error. Try again later.');
+  }
+});
+</script>
+
 </body>
 </html>
