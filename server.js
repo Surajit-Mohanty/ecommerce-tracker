@@ -19,6 +19,10 @@ const authUrl = process.env.SFMC_AUTH_URL;
 const restUrl = process.env.SFMC_REST_URL;
 const userDEKey = process.env.USER_DATA_EXTENSION_KEY;
 
+console.log('Using SFMC Auth URL:', authUrl);
+console.log('Using SFMC Client ID:', clientId);
+console.log('Using SFMC Client Secret:', clientSecret ? '***hidden***' : 'missing');
+
 // Build Data Extension rows URL for user DE
 const userDataExtensionUrl = `${restUrl}data/v1/async/dataextensions/key:${userDEKey}/rows`;
 
