@@ -4,20 +4,47 @@
   <meta charset="UTF-8" />
   <title>Products</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    #userInfo {
+      font-weight: bold;
+    }
+    button.small {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .product {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .product img {
+      width: 80px;
+      height: 80px;
+    }
+    .product button {
+      padding: 5px 10px;
+    }
+  </style>
   <script src="collect.js"></script>
 </head>
 <body>
-  <script>
-    // Protect page: redirect to login if no user found
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.email || !user.name) {
-      window.location.href = "index.html";
-    }
-  </script>
-
   <header>
     <div><strong>User:</strong> <span id="userInfo"></span></div>
-    <button onclick="logout()">Logout</button>
+    <button class="small" onclick="logout()">Logout</button>
   </header>
 
   <h1>Product Listing</h1>
@@ -25,11 +52,13 @@
   <a href="cart.html">Go to Cart</a>
 
   <script>
-    // Safe access after protection
-    const user = JSON.parse(localStorage.getItem("user"));
-    const email = user.email;
-    const name = user.name;
-    const cartKey = `cart_items_${email}`;
+    const email = localStorage.getItem("user_email");
+    const name = localStorage.getItem("user_name");
+    const loginTime = localStorage.getItem("login_time");
+
+    if (!email || !name) {
+      window.location.href = "index.html";
+    }
 
     document.getElementById("userInfo").innerText = `${name} (${email})`;
 
@@ -40,31 +69,43 @@
 
     const products = [
       { id: 1, name: "Product A", price: 50, image: "https://via.placeholder.com/80" },
-      { id: 2, name: "Product B", price: 75, image: "https://via.placeholder.com/80" }
+      { id: 2, name: "Product B", price: 75, image: "https://via.placeholder.com/80" },
+      { id: 3, name: "Product C", price: 100, image: "https://via.placeholder.com/80" }
     ];
 
     const container = document.getElementById("productList");
+    const cartKey = `cart_items_${email}`;
     let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
 
-    products.forEach(product => {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <img src="${product.image}" />
-        <strong>${product.name}</strong> - $${product.price}
-        <button onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
-      `;
-      container.appendChild(div);
-    });
+    function renderProducts() {
+      container.innerHTML = '';
+      products.forEach(product => {
+        const div = document.createElement("div");
+        div.className = "product";
+        div.innerHTML = `
+          <img src="${product.image}" />
+          <div>
+            <div><strong>${product.name}</strong></div>
+            <div>Price: $${product.price}</div>
+            <button onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
 
     function addToCart(product) {
       const existing = cart.find(item => item.id === product.id);
-      if (existing) existing.quantity += 1;
-      else cart.push({ ...product, quantity: 1 });
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({ ...product, quantity: 1 });
+      }
       localStorage.setItem(cartKey, JSON.stringify(cart));
       trackCart(cart);
     }
 
-    // Tracking
+    renderProducts();
     trackPageView("products.html");
   </script>
 </body>
