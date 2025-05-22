@@ -1,24 +1,28 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch'); // Required for fetch support in Node.js
+const fetch = require('node-fetch'); // fetch for Node.js
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from the public folder
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Salesforce credentials from environment variables
+// SFMC credentials and URLs from environment variables
 const clientId = process.env.SFMC_CLIENT_ID;
 const clientSecret = process.env.SFMC_CLIENT_SECRET;
 const authUrl = process.env.SFMC_AUTH_URL;
-const dataExtensionUrl = process.env.SFMC_DATA_EXTENSION_URL;
+const restUrl = process.env.SFMC_REST_URL;
+const userDEKey = process.env.USER_DATA_EXTENSION_KEY;
 
-// Get access token from SFMC
+// Build Data Extension rows URL for user DE
+const userDataExtensionUrl = `${restUrl}data/v1/async/dataextensions/key:${userDEKey}/rows`;
+
+// Get OAuth access token from SFMC
 async function getAccessToken() {
   const response = await fetch(authUrl, {
     method: 'POST',
@@ -30,11 +34,16 @@ async function getAccessToken() {
     }),
   });
 
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to get access token: ${text}`);
+  }
+
   const data = await response.json();
   return data.access_token;
 }
 
-// Signup handler: stores user data in User DE
+// Signup route - add user to Data Extension
 app.post('/api/signup', async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -51,7 +60,7 @@ app.post('/api/signup', async (req, res) => {
       ],
     };
 
-    const response = await fetch(dataExtensionUrl, {
+    const response = await fetch(userDataExtensionUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -63,7 +72,8 @@ app.post('/api/signup', async (req, res) => {
     if (response.ok) {
       res.status(200).send('Signup successful');
     } else {
-      console.error('Signup failed:', await response.text());
+      const text = await response.text();
+      console.error('Signup failed:', text);
       res.status(500).send('Signup failed');
     }
   } catch (error) {
@@ -72,14 +82,14 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Login handler: checks credentials from User DE
+// Login route - fetch all users and filter (basic demo, not scalable)
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const token = await getAccessToken();
 
-    const response = await fetch(`${dataExtensionUrl}?$filter=Email eq '${email}'`, {
+    const response = await fetch(userDataExtensionUrl, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -87,8 +97,15 @@ app.post('/api/login', async (req, res) => {
       },
     });
 
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to fetch users: ${text}`);
+    }
+
     const data = await response.json();
-    const user = data.items && data.items[0];
+
+    // Filter user by email (case-sensitive)
+    const user = data.items && data.items.find(u => u.Email === email);
 
     if (user && user.Password === password) {
       res.status(200).json({ name: user.Name, email: user.Email });
@@ -101,7 +118,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Cart tracking (if needed)
+// Cart tracking route - store event data in Data Extension (optional)
 app.post('/api/track', async (req, res) => {
   const { name, email, eventType, cartItems } = req.body;
 
@@ -120,7 +137,8 @@ app.post('/api/track', async (req, res) => {
       ],
     };
 
-    const response = await fetch(dataExtensionUrl, {
+    // Reuse same DE URL or use different DE URL for tracking events if you have one
+    const response = await fetch(userDataExtensionUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -132,7 +150,8 @@ app.post('/api/track', async (req, res) => {
     if (response.ok) {
       res.status(200).send('Event tracked');
     } else {
-      console.error('Track error:', await response.text());
+      const text = await response.text();
+      console.error('Track error:', text);
       res.status(500).send('Track error');
     }
   } catch (error) {
@@ -141,11 +160,12 @@ app.post('/api/track', async (req, res) => {
   }
 });
 
-// Default route to serve index.html for /
+// Serve main index.html on root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
