@@ -83,7 +83,7 @@ app.post('/api/login', async (req, res) => {
     const token = await getAccessToken();
 
     // Use the synchronous API to fetch user records
-    const response = await fetch(`${restUrl}data/v1/customobjectdata/key:${userDEKey}/rows`, {
+    const response = await fetch(`${restUrl}data/v1/customobjectdata/key/${userDEKey}/rowset`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
