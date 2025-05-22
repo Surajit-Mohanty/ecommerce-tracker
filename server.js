@@ -102,10 +102,12 @@ app.post('/api/login', async (req, res) => {
 
     // Flatten and find matching user by email
     const users = data.items || [];
-    const user = users.find(u => u.values.Email === email);
+    const user = users.find(u =>
+      u.keys.email === email && u.values.password === password
+    );
 
-    if (user && user.values.Password === password) {
-      res.status(200).json({ name: user.values.Name, email: user.values.Email });
+    if (user) {
+      res.status(200).json({ name: user.values.name, email: user.keys.email });
     } else {
       res.status(401).send('Invalid credentials');
     }
