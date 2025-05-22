@@ -7,12 +7,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Environment variables
+// SFMC credentials and URLs
 const clientId = process.env.SFMC_CLIENT_ID;
 const clientSecret = process.env.SFMC_CLIENT_SECRET;
 const authUrl = process.env.SFMC_AUTH_URL;
@@ -20,11 +15,12 @@ const restUrl = process.env.SFMC_REST_URL;
 const userDEKey = process.env.USER_DATA_EXTENSION_KEY;
 const eventDEKey = process.env.DATA_EXTENSION_KEY;
 
-// Construct DE endpoints
-const userDataExtensionUrl = `${restUrl}data/v1/customobjectdata/key/${userDEKey}/rowset`;
-const eventDataExtensionUrl = `${restUrl}data/v1/customobjectdata/key/${eventDEKey}/rowset`;
+// Middleware
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Get access token
+// Access token
 async function getAccessToken() {
   const response = await fetch(authUrl, {
     method: 'POST',
@@ -45,26 +41,19 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-// Signup - store in user DE
+// Signup API
 app.post('/api/signup', async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
     const token = await getAccessToken();
+    const url = `${restUrl}data/v1/async/dataextensions/key:${userDEKey}/rows`;
 
     const payload = {
-      items: [
-        {
-          keys: { Email: email },
-          values: {
-            Name: name,
-            Password: password,
-          },
-        },
-      ],
+      items: [{ Email: email, Name: name, Password: password }],
     };
 
-    const response = await fetch(userDataExtensionUrl, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -86,15 +75,15 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Login - retrieve from user DE by email
+// Login API
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const token = await getAccessToken();
-    const filterUrl = `${restUrl}data/v1/customobjectdata/key/${userDEKey}/rowset?$filter=Email%20eq%20'${email}'`;
+    const url = `${restUrl}data/v1/customobjectdata/key/${userDEKey}/rowset`;
 
-    const response = await fetch(filterUrl, {
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -104,14 +93,18 @@ app.post('/api/login', async (req, res) => {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Failed to fetch user: ${text}`);
+      throw new Error(`Failed to fetch users: ${text}`);
     }
 
     const data = await response.json();
-    const user = data.items?.[0]?.values;
+    const users = data.items || [];
 
-    if (user && user.Password === password) {
-      res.status(200).json({ name: user.Name, email: user.Email });
+    const user = users.find(
+      (u) => u.keys.Email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (user && user.values.Password === password) {
+      res.status(200).json({ name: user.values.Name, email: user.keys.Email });
     } else {
       res.status(401).send('Invalid credentials');
     }
@@ -121,28 +114,27 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Track cart events in event DE
+// Track API
 app.post('/api/track', async (req, res) => {
   const { name, email, eventType, cartItems } = req.body;
 
   try {
     const token = await getAccessToken();
+    const url = `${restUrl}data/v1/async/dataextensions/key:${eventDEKey}/rows`;
 
     const payload = {
       items: [
         {
-          keys: { Email: email },
-          values: {
-            Name: name,
-            EventType: eventType,
-            CartItems: JSON.stringify(cartItems),
-            Timestamp: new Date().toISOString(),
-          },
+          Name: name,
+          Email: email,
+          EventType: eventType,
+          CartItems: JSON.stringify(cartItems),
+          Timestamp: new Date().toISOString(),
         },
       ],
     };
 
-    const response = await fetch(eventDataExtensionUrl, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -164,7 +156,7 @@ app.post('/api/track', async (req, res) => {
   }
 });
 
-// Root route
+// Serve frontend
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
