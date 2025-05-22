@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch'); // Required for fetch support in Node.js
 require('dotenv').config();
@@ -6,6 +7,8 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Serve static files from the public folder
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -136,6 +139,11 @@ app.post('/api/track', async (req, res) => {
     console.error('Tracking error:', error);
     res.status(500).send('Tracking error');
   }
+});
+
+// Default route to serve index.html for /
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
