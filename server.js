@@ -1,91 +1,143 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const fetch = require("node-fetch");
+const express = require('express');
+const bodyParser = require('body-parser');
+const fetch = require('node-fetch'); // Required for fetch support in Node.js
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3000;
+
 app.use(bodyParser.json());
-app.use(express.static("public"));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-let accessToken = null;
-let tokenExpiry = null;
+// Salesforce credentials from environment variables
+const clientId = process.env.SFMC_CLIENT_ID;
+const clientSecret = process.env.SFMC_CLIENT_SECRET;
+const authUrl = process.env.SFMC_AUTH_URL;
+const dataExtensionUrl = process.env.SFMC_DATA_EXTENSION_URL;
 
+// Get access token from SFMC
 async function getAccessToken() {
-  const now = Date.now();
-  if (accessToken && tokenExpiry && now < tokenExpiry) return accessToken;
-
-  const response = await fetch(`${process.env.SFMC_AUTH_URL}/v2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const response = await fetch(authUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: process.env.SFMC_CLIENT_ID,
-      client_secret: process.env.SFMC_CLIENT_SECRET,
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
     }),
   });
 
   const data = await response.json();
-  accessToken = data.access_token;
-  tokenExpiry = now + data.expires_in * 1000;
-  return accessToken;
+  return data.access_token;
 }
 
-app.post("/api/track", async (req, res) => {
+// Signup handler: stores user data in User DE
+app.post('/api/signup', async (req, res) => {
+  const { name, email, password } = req.body;
+
   try {
     const token = await getAccessToken();
-    const response = await fetch(`${process.env.SFMC_REST_URL}/data/v1/customobjectdata/key/${process.env.DATA_EXTENSION_KEY}/rowset`, {
-      method: "POST",
+
+    const payload = {
+      items: [
+        {
+          Email: email,
+          Name: name,
+          Password: password,
+        },
+      ],
+    };
+
+    const response = await fetch(dataExtensionUrl, {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ items: [req.body] }),
+      body: JSON.stringify(payload),
     });
 
-    const result = await response.json();
-    res.status(response.status).json(result);
-  } catch (err) {
-    console.error("Track error:", err);
-    res.status(500).json({ error: "Failed to track event." });
+    if (response.ok) {
+      res.status(200).send('Signup successful');
+    } else {
+      console.error('Signup failed:', await response.text());
+      res.status(500).send('Signup failed');
+    }
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).send('Signup error');
   }
 });
 
-app.post("/api/signup", async (req, res) => {
+// Login handler: checks credentials from User DE
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+
   try {
     const token = await getAccessToken();
-    const response = await fetch(`${process.env.SFMC_REST_URL}/data/v1/customobjectdata/key/${process.env.USER_DATA_EXTENSION_KEY}/rowset`, {
-      method: "POST",
+
+    const response = await fetch(`${dataExtensionUrl}?$filter=Email eq '${email}'`, {
+      method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ items: [req.body] }),
     });
 
-    const result = await response.json();
-    res.status(response.status).json(result);
-  } catch (err) {
-    console.error("Signup error:", err);
-    res.status(500).json({ error: "Failed to sign up." });
+    const data = await response.json();
+    const user = data.items && data.items[0];
+
+    if (user && user.Password === password) {
+      res.status(200).json({ name: user.Name, email: user.Email });
+    } else {
+      res.status(401).send('Invalid credentials');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).send('Login error');
   }
 });
 
-app.get("/api/users", async (req, res) => {
+// Cart tracking (if needed)
+app.post('/api/track', async (req, res) => {
+  const { name, email, eventType, cartItems } = req.body;
+
   try {
     const token = await getAccessToken();
-    const response = await fetch(`${process.env.SFMC_REST_URL}/data/v1/customobjectdata/key/${process.env.USER_DATA_EXTENSION_KEY}/rowset`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
+
+    const payload = {
+      items: [
+        {
+          Name: name,
+          Email: email,
+          EventType: eventType,
+          CartItems: JSON.stringify(cartItems),
+          Timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+
+    const response = await fetch(dataExtensionUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
-    const result = await response.json();
-    res.json(result);
-  } catch (err) {
-    console.error("User fetch error:", err);
-    res.status(500).json({ error: "Failed to fetch users." });
+
+    if (response.ok) {
+      res.status(200).send('Event tracked');
+    } else {
+      console.error('Track error:', await response.text());
+      res.status(500).send('Track error');
+    }
+  } catch (error) {
+    console.error('Tracking error:', error);
+    res.status(500).send('Tracking error');
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
