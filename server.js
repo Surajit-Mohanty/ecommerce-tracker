@@ -98,6 +98,8 @@ app.post('/api/login', async (req, res) => {
 
     const data = await response.json();
 
+    console.log('Fetched users:', JSON.stringify(data, null, 2));
+
     // Flatten and find matching user by email
     const users = data.items || [];
     const user = users.find(u => u.values.Email === email);
