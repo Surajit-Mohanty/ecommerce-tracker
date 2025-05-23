@@ -14,13 +14,13 @@
     }
 
     header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 10px;
-}
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 10px;
+    }
 
     #userSection {
       font-size: 14px;
@@ -28,15 +28,14 @@
     }
 
     .logout-btn {
-  background-color: #f44336;
-  color: white;
-  border: none;
-  padding: 4px 10px; /* smaller padding */
-  font-size: 12px;    /* smaller text */
-  cursor: pointer;
-  border-radius: 4px;
-  margin-left: auto;  /* push to right */
-}
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 6px 8px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
 
     h1 {
       font-size: 26px;
@@ -79,7 +78,7 @@
       background-color: #4CAF50;
       color: white;
       border: none;
-      padding: 8px 14px;
+      padding: 6px 12px;
       font-size: 14px;
       cursor: pointer;
       border-radius: 4px;
@@ -91,6 +90,34 @@
       text-align: center;
       font-weight: bold;
     }
+
+    .quantity-input {
+      width: 50px;
+      margin-top: 5px;
+      padding: 4px;
+      text-align: center;
+    }
+
+    .popup {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 6px;
+      display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+      animation: fadeInOut 3s ease-in-out;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -99,14 +126,14 @@
       <strong>User:</strong> <span id="userInfo"></span><br />
       <strong>Login Time:</strong> <span id="loginTime"></span>
     </div>
-   <div class="logout-container">
-  <button class="logout-btn" onclick="logout()">Logout</button>
-</div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
   </header>
 
   <h1>Available Products</h1>
   <div id="productList"></div>
   <a href="cart.html" class="cart-link">Go to Cart</a>
+
+  <div id="popup" class="popup">Item added to cart</div>
 
   <script>
     const email = localStorage.getItem("user_email");
@@ -145,6 +172,7 @@
             <strong>${product.name}</strong><br />
             $${product.price}
           </div>
+          <input type="number" class="quantity-input" id="qty_${product.id}" min="1" value="1" />
           <button class="add-btn" onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
         `;
         container.appendChild(div);
@@ -152,16 +180,27 @@
     }
 
     function addToCart(product) {
+      const qty = parseInt(document.getElementById(`qty_${product.id}`).value) || 1;
       const cartKey = `cart_items_${email}`;
       let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
       const existing = cart.find(item => item.id === product.id);
       if (existing) {
-        existing.quantity += 1;
+        existing.quantity += qty;
       } else {
-        cart.push({ ...product, quantity: 1 });
+        cart.push({ ...product, quantity: qty });
       }
       localStorage.setItem(cartKey, JSON.stringify(cart));
       trackCart(cart);
+      showPopup("Item added to cart");
+    }
+
+    function showPopup(message) {
+      const popup = document.getElementById("popup");
+      popup.innerText = message;
+      popup.style.display = "block";
+      setTimeout(() => {
+        popup.style.display = "none";
+      }, 3000);
     }
 
     renderProducts();
