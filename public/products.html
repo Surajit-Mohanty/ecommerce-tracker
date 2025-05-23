@@ -4,47 +4,28 @@
   <meta charset="UTF-8" />
   <title>Products</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="collect.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      padding: 10px;
+      background: #f0f0f0;
     }
-    #userInfo {
-      font-weight: bold;
-    }
-    button.small {
-      padding: 5px 10px;
+    button.logout-btn {
+      padding: 4px 8px;
       font-size: 12px;
     }
     .product {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
       margin: 10px 0;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-    .product img {
-      width: 80px;
-      height: 80px;
-    }
-    .product button {
-      padding: 5px 10px;
     }
   </style>
-  <script src="collect.js"></script>
 </head>
 <body>
   <header>
     <div><strong>User:</strong> <span id="userInfo"></span></div>
-    <button class="small" onclick="logout()">Logout</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
   </header>
 
   <h1>Product Listing</h1>
@@ -58,9 +39,9 @@
 
     if (!email || !name) {
       window.location.href = "index.html";
+    } else {
+      document.getElementById("userInfo").innerText = name + " (" + email + ")";
     }
-
-    document.getElementById("userInfo").innerText = `${name} (${email})`;
 
     function logout() {
       localStorage.clear();
@@ -70,42 +51,31 @@
     const products = [
       { id: 1, name: "Product A", price: 50, image: "https://via.placeholder.com/80" },
       { id: 2, name: "Product B", price: 75, image: "https://via.placeholder.com/80" },
-      { id: 3, name: "Product C", price: 100, image: "https://via.placeholder.com/80" }
     ];
 
     const container = document.getElementById("productList");
     const cartKey = `cart_items_${email}`;
     let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
 
-    function renderProducts() {
-      container.innerHTML = '';
-      products.forEach(product => {
-        const div = document.createElement("div");
-        div.className = "product";
-        div.innerHTML = `
-          <img src="${product.image}" />
-          <div>
-            <div><strong>${product.name}</strong></div>
-            <div>Price: $${product.price}</div>
-            <button onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
+    products.forEach(product => {
+      const div = document.createElement("div");
+      div.className = "product";
+      div.innerHTML = `
+        <img src="${product.image}" />
+        <strong>${product.name}</strong> - $${product.price}
+        <button onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
+      `;
+      container.appendChild(div);
+    });
 
     function addToCart(product) {
       const existing = cart.find(item => item.id === product.id);
-      if (existing) {
-        existing.quantity += 1;
-      } else {
-        cart.push({ ...product, quantity: 1 });
-      }
+      if (existing) existing.quantity += 1;
+      else cart.push({ ...product, quantity: 1 });
       localStorage.setItem(cartKey, JSON.stringify(cart));
       trackCart(cart);
     }
 
-    renderProducts();
     trackPageView("products.html");
   </script>
 </body>
