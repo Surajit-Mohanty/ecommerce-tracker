@@ -32,7 +32,7 @@
       color: white;
       border: none;
       padding: 6px 8px;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       border-radius: 4px;
     }
@@ -74,6 +74,30 @@
       font-size: 16px;
     }
 
+    .cart-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .qty-btn {
+      padding: 4px 8px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background-color: white;
+    }
+
+    .quantity-input {
+      width: 40px;
+      text-align: center;
+      font-size: 14px;
+      padding: 4px;
+    }
+
     .add-btn {
       background-color: #4CAF50;
       color: white;
@@ -91,13 +115,6 @@
       font-weight: bold;
     }
 
-    .quantity-input {
-      width: 50px;
-      margin-top: 5px;
-      padding: 4px;
-      text-align: center;
-    }
-
     .popup {
       position: fixed;
       bottom: 30px;
@@ -109,7 +126,11 @@
       display: none;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       z-index: 1000;
-      animation: fadeInOut 3s ease-in-out;
+    }
+
+    .popup.show {
+      display: block;
+      animation: fadeInOut 3s ease-in-out forwards;
     }
 
     @keyframes fadeInOut {
@@ -160,9 +181,8 @@
       { id: 105, name: "Monitor", price: 199, image: "https://via.placeholder.com/120?text=Monitor" }
     ];
 
-    const container = document.getElementById("productList");
-
     function renderProducts() {
+      const container = document.getElementById("productList");
       products.forEach(product => {
         const div = document.createElement("div");
         div.className = "product";
@@ -172,22 +192,34 @@
             <strong>${product.name}</strong><br />
             $${product.price}
           </div>
-          <input type="number" class="quantity-input" id="qty_${product.id}" min="1" value="1" />
-          <button class="add-btn" onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
+          <div class="cart-controls">
+            <button class="qty-btn" onclick="changeQty(${product.id}, -1)">-</button>
+            <input type="number" class="quantity-input" id="qty_${product.id}" value="1" min="1" />
+            <button class="qty-btn" onclick="changeQty(${product.id}, 1)">+</button>
+            <button class="add-btn" onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
+          </div>
         `;
         container.appendChild(div);
       });
     }
 
+    function changeQty(id, delta) {
+      const input = document.getElementById(`qty_${id}`);
+      let value = parseInt(input.value) || 1;
+      value = Math.max(1, value + delta);
+      input.value = value;
+    }
+
     function addToCart(product) {
-      const qty = parseInt(document.getElementById(`qty_${product.id}`).value) || 1;
+      const qtyInput = document.getElementById(`qty_${product.id}`);
+      const quantity = parseInt(qtyInput.value) || 1;
       const cartKey = `cart_items_${email}`;
       let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
       const existing = cart.find(item => item.id === product.id);
       if (existing) {
-        existing.quantity += qty;
+        existing.quantity += quantity;
       } else {
-        cart.push({ ...product, quantity: qty });
+        cart.push({ ...product, quantity });
       }
       localStorage.setItem(cartKey, JSON.stringify(cart));
       trackCart(cart);
@@ -197,10 +229,8 @@
     function showPopup(message) {
       const popup = document.getElementById("popup");
       popup.innerText = message;
-      popup.style.display = "block";
-      setTimeout(() => {
-        popup.style.display = "none";
-      }, 3000);
+      popup.classList.add("show");
+      setTimeout(() => popup.classList.remove("show"), 3000);
     }
 
     renderProducts();
