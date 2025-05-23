@@ -2,60 +2,170 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cart</title>
+  <title>Your Cart</title>
   <link rel="stylesheet" href="style.css" />
   <script src="collect.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 960px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 10px;
+    }
+
+    #userSection {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .logout-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 6px 8px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+
+    #cartList {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .cart-item {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      background-color: #fafafa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .cart-item img {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+
+    .item-info {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .item-info strong {
+      font-size: 16px;
+    }
+
+    .remove-btn {
+      background-color: #ff5722;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+
+    .total {
+      margin-top: 30px;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: right;
+    }
+
+    .back-link {
+      display: block;
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
   <header>
-    <div><strong>User:</strong> <span id="userInfo"></span></div>
-    <button onclick="logout()">Logout</button>
+    <div id="userSection">
+      <strong>User:</strong> <span id="userInfo"></span><br />
+      <strong>Login Time:</strong> <span id="loginTime"></span>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
   </header>
 
   <h1>Your Cart</h1>
-  <div id="cartItems"></div>
-  <button onclick="sendToSFMC()">Send to SFMC</button>
-  <a href="products.html" id="continueLink">Continue Shopping</a>
+  <div id="cartList"></div>
+  <div class="total" id="grandTotal"></div>
+  <a href="products.html" class="back-link">Continue Shopping</a>
 
   <script>
     const email = localStorage.getItem("user_email");
     const name = localStorage.getItem("user_name");
     const loginTime = localStorage.getItem("login_time");
-    if (!email || !name) window.location.href = "index.html";
-    document.getElementById("userInfo").innerText = `${name} (${email})`;
+
+    if (!email || !name) {
+      window.location.href = "index.html";
+    } else {
+      document.getElementById("userInfo").innerText = `${name} (${email})`;
+      document.getElementById("loginTime").innerText = new Date(loginTime).toLocaleString();
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "index.html";
+    }
 
     const cartKey = `cart_items_${email}`;
     let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const container = document.getElementById("cartItems");
+    const container = document.getElementById("cartList");
 
     function renderCart() {
       container.innerHTML = "";
-      if (cart.length === 0) {
-        container.innerHTML = "<p>Your cart is empty.</p>";
-        document.getElementById("continueLink").style.display = "inline";
-        return;
-      }
+      let grandTotal = 0;
+
       cart.forEach((item, index) => {
+        const totalItemPrice = item.price * item.quantity;
+        grandTotal += totalItemPrice;
+
         const div = document.createElement("div");
+        div.className = "cart-item";
         div.innerHTML = `
-          <img src="${item.image}" />
-          <strong>${item.name}</strong><br/>Qty: ${item.quantity}<br/>$${item.price}
-          <span onclick="removeFromCart(${index})" style="color:red;cursor:pointer;">Remove</span>
+          <img src="${item.image}" alt="${item.name}" />
+          <div class="item-info">
+            <strong>${item.name}</strong><br />
+            Price: $${item.price}<br />
+            Quantity: ${item.quantity}<br />
+            Total: $${totalItemPrice}
+          </div>
+          <button class="remove-btn" onclick="removeItem(${index})">Remove</button>
         `;
         container.appendChild(div);
       });
+
+      document.getElementById("grandTotal").innerText = `Grand Total: $${grandTotal.toFixed(2)}`;
     }
 
-    function removeFromCart(index) {
+    function removeItem(index) {
       cart.splice(index, 1);
       localStorage.setItem(cartKey, JSON.stringify(cart));
       renderCart();
       trackCart(cart);
-    }
-
-    function sendToSFMC() {
-      if (cart.length === 0) return alert("Cart is empty");
-      trackConversion(cart);
     }
 
     renderCart();
