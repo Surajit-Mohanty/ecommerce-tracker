@@ -14,13 +14,13 @@
     }
 
     header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 10px;
-    }
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+}
 
     #userSection {
       font-size: 14px;
@@ -28,14 +28,15 @@
     }
 
     .logout-btn {
-      background-color: #f44336;
-      color: white;
-      border: none;
-      padding: 6px 8px;
-      font-size: 14px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 4px 10px; /* smaller padding */
+  font-size: 12px;    /* smaller text */
+  cursor: pointer;
+  border-radius: 4px;
+  margin-left: auto;  /* push to right */
+}
 
     h1 {
       font-size: 26px;
@@ -98,7 +99,9 @@
       <strong>User:</strong> <span id="userInfo"></span><br />
       <strong>Login Time:</strong> <span id="loginTime"></span>
     </div>
-    <button class="logout-btn" onclick="logout()">Logout</button>
+   <div class="logout-container">
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
   </header>
 
   <h1>Available Products</h1>
