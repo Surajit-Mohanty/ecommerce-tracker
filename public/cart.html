@@ -83,6 +83,18 @@
       text-align: right;
       margin-top: 20px;
     }
+
+    .send-btn {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      margin-top: 20px;
+      float: right;
+    }
   </style>
 </head>
 <body>
@@ -97,6 +109,8 @@
   <h1>Your Shopping Cart</h1>
   <div id="cartList"></div>
   <div id="grandTotal" class="grand-total"></div>
+
+  <button class="send-btn" onclick="sendCartToSFMC()">Send Cart to SFMC</button>
 
   <script>
     const email = localStorage.getItem("user_email");
@@ -135,21 +149,55 @@
           <img src="${item.image}" alt="${item.name}" />
           <div class="item-details">
             <strong>${item.name}</strong><br />
-            Price: $${item.price} × ${item.quantity} = $${itemTotal}
+            Price: $${item.price} Ã— ${item.quantity} = $${itemTotal.toFixed(2)}
           </div>
           <button class="remove-btn" onclick="removeItem(${index})">Remove</button>
         `;
         container.appendChild(div);
       });
 
-      grandTotalEl.innerText = `Grand Total: $${grandTotal}`;
+      grandTotalEl.innerText = `Grand Total: $${grandTotal.toFixed(2)}`;
     }
 
     function removeItem(index) {
       cart.splice(index, 1);
       localStorage.setItem(cartKey, JSON.stringify(cart));
       renderCart();
+      // Optionally, update tracking on remove
       trackCart(cart);
+    }
+
+    // New function to send cart data to SFMC via your backend
+    async function sendCartToSFMC() {
+      if (cart.length === 0) {
+        alert("Your cart is empty.");
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/track', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: name,
+            email: email,
+            eventType: 'cart_update',
+            cartItems: cart,
+          }),
+        });
+
+        if (response.ok) {
+          alert('Cart data successfully sent to SFMC!');
+        } else {
+          alert('Failed to send cart data to SFMC.');
+          console.error('Error response:', await response.text());
+        }
+      } catch (error) {
+        alert('Error sending cart data.');
+        console.error('Send cart error:', error);
+      }
     }
 
     renderCart();
