@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Your Cart</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="collect.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,29 +21,51 @@
       padding-bottom: 10px;
     }
 
-    #userSection {
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
     .logout-btn {
       background-color: #f44336;
       color: white;
       border: none;
       padding: 6px 8px;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       border-radius: 4px;
     }
 
-    h1 {
-      font-size: 26px;
+    #userSection {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 20px;
     }
 
-    #cartList {
+    h1 {
+      font-size: 26px;
+      margin: 0;
+    }
+
+    .back-link {
+      font-weight: bold;
+      font-size: 14px;
+      text-decoration: none;
+      color: #333;
+      background-color: #eee;
+      padding: 6px 10px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    .back-link:hover {
+      background-color: #ddd;
+    }
+
+    #cartItems {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
     }
 
@@ -65,38 +86,31 @@
       margin-bottom: 10px;
     }
 
-    .item-info {
+    .cart-info {
       text-align: center;
       margin-bottom: 10px;
     }
 
-    .item-info strong {
+    .cart-info strong {
       font-size: 16px;
     }
 
+    .total-line {
+      margin-top: 30px;
+      font-size: 18px;
+      text-align: right;
+      font-weight: bold;
+    }
+
     .remove-btn {
-      background-color: #ff5722;
+      background-color: #f44336;
       color: white;
       border: none;
-      padding: 6px 10px;
-      font-size: 14px;
+      padding: 5px 10px;
+      font-size: 13px;
       cursor: pointer;
       border-radius: 4px;
       margin-top: 8px;
-    }
-
-    .total {
-      margin-top: 30px;
-      font-size: 18px;
-      font-weight: bold;
-      text-align: right;
-    }
-
-    .back-link {
-      display: block;
-      margin-top: 20px;
-      text-align: center;
-      font-weight: bold;
     }
   </style>
 </head>
@@ -109,10 +123,13 @@
     <button class="logout-btn" onclick="logout()">Logout</button>
   </header>
 
-  <h1>Your Cart</h1>
-  <div id="cartList"></div>
-  <div class="total" id="grandTotal"></div>
-  <a href="products.html" class="back-link">Continue Shopping</a>
+  <div class="page-header">
+    <h1>Your Cart</h1>
+    <a href="products.html" class="back-link">Back to Products</a>
+  </div>
+
+  <div id="cartItems"></div>
+  <div class="total-line" id="cartTotal">Total: $0</div>
 
   <script>
     const email = localStorage.getItem("user_email");
@@ -131,45 +148,44 @@
       window.location.href = "index.html";
     }
 
-    const cartKey = `cart_items_${email}`;
-    let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const container = document.getElementById("cartList");
-
     function renderCart() {
+      const cartKey = `cart_items_${email}`;
+      const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+      const container = document.getElementById("cartItems");
+      const totalDisplay = document.getElementById("cartTotal");
       container.innerHTML = "";
+
       let grandTotal = 0;
 
       cart.forEach((item, index) => {
-        const totalItemPrice = item.price * item.quantity;
-        grandTotal += totalItemPrice;
+        const total = item.price * item.quantity;
+        grandTotal += total;
 
         const div = document.createElement("div");
         div.className = "cart-item";
         div.innerHTML = `
           <img src="${item.image}" alt="${item.name}" />
-          <div class="item-info">
+          <div class="cart-info">
             <strong>${item.name}</strong><br />
-            Price: $${item.price}<br />
-            Quantity: ${item.quantity}<br />
-            Total: $${totalItemPrice}
+            $${item.price} × ${item.quantity} = <strong>$${total}</strong>
           </div>
-          <button class="remove-btn" onclick="removeItem(${index})">Remove</button>
+          <button class="remove-btn" onclick="removeFromCart(${item.id})">Remove</button>
         `;
         container.appendChild(div);
       });
 
-      document.getElementById("grandTotal").innerText = `Grand Total: $${grandTotal.toFixed(2)}`;
+      totalDisplay.innerText = `Total: $${grandTotal.toFixed(2)}`;
     }
 
-    function removeItem(index) {
-      cart.splice(index, 1);
+    function removeFromCart(id) {
+      const cartKey = `cart_items_${email}`;
+      let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+      cart = cart.filter(item => item.id !== id);
       localStorage.setItem(cartKey, JSON.stringify(cart));
       renderCart();
-      trackCart(cart);
     }
 
     renderCart();
-    trackPageView("cart.html");
   </script>
 </body>
 </html>
