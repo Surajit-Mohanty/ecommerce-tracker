@@ -7,7 +7,7 @@ body {
 input, button {
   margin: 10px 0;
   padding: 10px;
-  width: 100%;
+  width: 20%;
 }
 .success { color: green; }
 .error { color: red; }
